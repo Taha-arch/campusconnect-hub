@@ -36,7 +36,7 @@ function HomePage() {
   const filteredEvents = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase("fr");
     return events.filter((event) => {
-      const matchesSearch = !needle || [event.title, event.location, event.category, event.venue].some((value) => value.toLocaleLowerCase("fr").includes(needle));
+      const matchesSearch = !needle || [event.title, event.city, event.category, event.venue].some((value) => value.toLocaleLowerCase("fr").includes(needle));
       const matchesCategory = category === "Tous" || event.category === category;
       const matchesLocation = location === "Toutes les villes" || event.city === location;
       return matchesSearch && matchesCategory && matchesLocation;
