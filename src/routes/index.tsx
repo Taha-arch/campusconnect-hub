@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Building2, CalendarDays, Check, ChevronDown, Heart, MapPin, Menu, Search, Sparkles, Tag, Users, X } from "lucide-react";
 import logo from "/synapse-mark.png";
 import { Button } from "@/components/ui/button";
-import { events } from "@/data/events";
+import { events, type CampusEvent } from "@/data/events";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,15 +20,18 @@ export const Route = createFileRoute("/")({
 });
 
 const categories = ["Tous", "Conférence", "Atelier", "Compétition", "Culture"];
+type AuthMode = "login" | "signup" | "organizer" | "reset";
+type DialogState = { type: "auth"; mode: AuthMode } | { type: "ai" } | null;
 
 function HomePage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Tous");
   const [location, setLocation] = useState("Toutes les villes");
-  const [favorites, setFavorites] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [dialog, setDialog] = useState(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<CampusEvent | null>(null);
+  const [dialog, setDialog] = useState<DialogState>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const featuredEvent = events[0];
 
   const filteredEvents = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase("fr");
@@ -86,12 +89,12 @@ function HomePage() {
                   <span className="ai-icon"><Sparkles size={18} /></span>
                   <span><strong>Campus AI</strong><small>Posez vos questions</small></span>
                 </button>
-                <button className="next-event" onClick={() => setSelectedEvent(events[0])}>
+                {featuredEvent && <button className="next-event" onClick={() => setSelectedEvent(featuredEvent)}>
                   <span className="next-event-label"><CalendarDays size={15} /> PROCHAIN ÉVÉNEMENT</span>
-                  <strong>{events[0].title}</strong>
-                  <span>{events[0].date} · {events[0].venue}</span>
-                  <Seats event={events[0]} compact />
-                </button>
+                  <strong>{featuredEvent.title}</strong>
+                  <span>{featuredEvent.date} · {featuredEvent.venue}</span>
+                  <Seats event={featuredEvent} compact />
+                </button>}
               </div>
             </div>
 
@@ -132,7 +135,7 @@ function HomePage() {
 
             <aside className="organizer-banner">
               <div className="organizer-copy"><span className="organizer-eyebrow"><Building2 size={15} /> Espace organisateur</span><h2>Vous organisez des événements ?</h2><p>Créez, modifiez et suivez vos événements depuis l’espace organisateur. Chaque événement est publié après validation par l’administrateur.</p></div>
-              <Button variant="sand" onClick={() => setDialog({ type: "auth", mode: "organizer" })}>Accéder à l’espace organisateur <ArrowRight size={16} /></Button>
+              <Button variant="secondary" onClick={() => setDialog({ type: "auth", mode: "organizer" })}>Accéder à l’espace organisateur <ArrowRight size={16} /></Button>
               <span className="organizer-detail" aria-hidden="true" />
             </aside>
           </div>
@@ -148,12 +151,12 @@ function HomePage() {
   );
 }
 
-function Seats({ event, compact = false }) {
+function Seats({ event, compact = false }: { event: CampusEvent; compact?: boolean }) {
   const filled = event.total === event.remaining ? 20 : Math.max(1, Math.round((event.total - event.remaining) / event.total * 20));
   return <div className={`seats${compact ? " seats-compact" : ""}`}><span className="seat-track" aria-label={event.full ? "Événement complet" : `${event.remaining} places restantes`}>{Array.from({ length: 20 }, (_, i) => <i className={i < filled ? "seat-filled" : ""} key={i} />)}</span><span>{event.full ? "Complet" : `${event.remaining} places restantes`}</span></div>;
 }
 
-function EventCard({ event, isFavorite, onFavorite, onView }) {
+function EventCard({ event, isFavorite, onFavorite, onView }: { event: CampusEvent; isFavorite: boolean; onFavorite: () => void; onView: () => void }) {
   return <article className="event-card">
     <div className={`event-image${event.image ? "" : " event-image-art"}`}>
       {event.image && <img src={event.image} alt={event.imageAlt} loading="lazy" />}
@@ -172,11 +175,11 @@ function EventCard({ event, isFavorite, onFavorite, onView }) {
   </article>;
 }
 
-function Dialog({ children, onClose }) {
+function Dialog({ children, onClose }: { children: ReactNode; onClose: () => void }) {
   return <div className="dialog-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><section className="dialog-panel" role="dialog" aria-modal="true"><button className="dialog-close" aria-label="Fermer" onClick={onClose}><X size={20} /></button>{children}</section></div>;
 }
 
-function EventDetails({ event, isFavorite, onFavorite, onJoin }) {
+function EventDetails({ event, isFavorite, onFavorite, onJoin }: { event: CampusEvent; isFavorite: boolean; onFavorite: () => void; onJoin: () => void }) {
   return <div className="details-panel">
     {event.image ? <img className="details-image" src={event.image} alt={event.imageAlt} /> : <div className="details-image details-art"><Sparkles size={30} /></div>}
     <span className="eyebrow"><Tag size={14} /> {event.category}</span><h2>{event.title}</h2>
@@ -189,7 +192,7 @@ function EventDetails({ event, isFavorite, onFavorite, onJoin }) {
   </div>;
 }
 
-function AuthPanel({ mode, onSwitch }) {
+function AuthPanel({ mode, onSwitch }: { mode: AuthMode; onSwitch: (mode: AuthMode) => void }) {
   const organizer = mode === "organizer";
   const signup = mode === "signup" || organizer;
   return <div className="auth-panel">
